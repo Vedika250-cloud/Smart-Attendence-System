@@ -1,16 +1,266 @@
-{% extends 'base.html' %}{% block heading %}Reports & Analytics{% endblock %}{% block content %}<div class="stats-grid compact">{% for label,value in [('Students',stats.students),('Sessions',stats.sessions),('Attendance',stats.attendance)] %}<div class="stat-card"><div class="stat-value">{{ value }}</div><div class="stat-label">{{ label }}</div></div>{% endfor %}</div><div class="page-card table-card"><div class="card-head"><div><h2>Student attendance summary</h2><p>Calculated from stored sessions and attendance records.</p></div><button id="export-btn" class="primary-btn">Export Excel</button></div><table class="table-hover"><thead><tr><th>Student</th><th>Roll No</th><th>Present</th><th>Sessions</th><th>Attendance %</th></tr></thead><tbody>{% for r in rows %}<tr><td>{{ r.student }}</td><td>{{ r.roll_no }}</td><td>{{ r.present }}</td><td>{{ r.sessions }}</td><td><div class="bar"><span style="width:{{ r.pct }}%"></span></div><strong>{{ r.pct }}%</strong></td></tr>{% else %}<tr><td colspan="5" class="empty"><div style="padding: 20px;"><strong>No data available.</strong><br><small>Register students and run sessions to generate analytics.</small></div></td></tr>{% endfor %}</tbody></table></div>{% endblock %}
+{% extends 'base.html' %}
+{% block heading %}Reports & Analytics{% endblock %}
+
+{% block content %}
+<style>
+.filter-panel {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 24px;
+}
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.filter-group {
+    display: flex;
+    flex-direction: column;
+}
+.filter-group label {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #4b5563;
+}
+.filter-group input, .filter-group select {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+}
+.filter-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    align-items: center;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 16px;
+}
+.session-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+.session-header {
+    background: #f9fafb;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.session-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+}
+.session-meta {
+    font-size: 14px;
+    color: #4b5563;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+.session-stats {
+    display: flex;
+    gap: 20px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #d1d5db;
+}
+.stat-item {
+    font-size: 13px;
+    color: #374151;
+}
+.stat-item strong {
+    color: #111827;
+}
+.badge-present { background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.badge-absent { background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+</style>
+
+<div class="stats-grid compact">
+    <div class="stat-card"><div class="stat-value">{{ summary.sessions }}</div><div class="stat-label">Total Sessions</div></div>
+    <div class="stat-card"><div class="stat-value">{{ summary.students }}</div><div class="stat-label">Total Enrolled</div></div>
+    <div class="stat-card"><div class="stat-value">{{ summary.present }}</div><div class="stat-label">Total Present</div></div>
+    <div class="stat-card"><div class="stat-value">{{ summary.absent }}</div><div class="stat-label">Total Absent</div></div>
+    <div class="stat-card"><div class="stat-value">{{ summary.avg_pct }}%</div><div class="stat-label">Avg Attendance</div></div>
+</div>
+
+<div class="filter-panel">
+    <form method="GET" action="/reports">
+        <div class="filter-grid">
+            <div class="filter-group">
+                <label>From Date</label>
+                <input type="date" name="from_date" value="{{ filters.from_date }}">
+            </div>
+            <div class="filter-group">
+                <label>To Date</label>
+                <input type="date" name="to_date" value="{{ filters.to_date }}">
+            </div>
+            <div class="filter-group">
+                <label>Session</label>
+                <select name="session_id">
+                    <option value="">All Sessions</option>
+                    {% for s in sessions %}
+                    <option value="{{ s.session_id }}" {% if filters.session_id|string == s.session_id|string %}selected{% endif %}>
+                        #{{ s.session_id }} - {{ s.session_date }} ({{ s.class_.class_name }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Course</label>
+                <select name="course_id">
+                    <option value="">All Courses</option>
+                    {% for c in courses %}
+                    <option value="{{ c.course_id }}" {% if filters.course_id|string == c.course_id|string %}selected{% endif %}>
+                        {{ c.course_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Class</label>
+                <select name="class_id">
+                    <option value="">All Classes</option>
+                    {% for c in classes %}
+                    <option value="{{ c.class_id }}" {% if filters.class_id|string == c.class_id|string %}selected{% endif %}>
+                        {{ c.class_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Student</label>
+                <select name="student_id">
+                    <option value="">All Students</option>
+                    {% for s in students %}
+                    <option value="{{ s.student_id }}" {% if filters.student_id|string == s.student_id|string %}selected{% endif %}>
+                        {{ s.roll_no }} - {{ s.first_name }} {{ s.last_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Attendance Status</label>
+                <select name="status">
+                    <option value="All" {% if filters.status == 'All' %}selected{% endif %}>All</option>
+                    <option value="Present" {% if filters.status == 'Present' %}selected{% endif %}>Present</option>
+                    <option value="Absent" {% if filters.status == 'Absent' %}selected{% endif %}>Absent</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Recognition Method</label>
+                <select name="recognition_method">
+                    <option value="All" {% if filters.recognition_method == 'All' %}selected{% endif %}>All</option>
+                    <option value="DeepFace/Facenet" {% if filters.recognition_method == 'DeepFace/Facenet' %}selected{% endif %}>Face Recognition</option>
+                    <option value="Manual" {% if filters.recognition_method == 'Manual' %}selected{% endif %}>Manual</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Liveness Result</label>
+                <select name="liveness_result">
+                    <option value="All" {% if filters.liveness_result == 'All' %}selected{% endif %}>All</option>
+                    <option value="Passed" {% if filters.liveness_result == 'Passed' %}selected{% endif %}>Passed</option>
+                    <option value="Failed" {% if filters.liveness_result == 'Failed' %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+        </div>
+        <div class="filter-actions">
+            <span style="flex-grow: 1; font-size: 14px; color: #6b7280;">Showing {{ summary.records }} records across {{ summary.sessions }} sessions</span>
+            <a href="/reports" class="secondary-btn" style="text-decoration: none;">Reset Filters</a>
+            <button type="submit" class="primary-btn">Apply Filters</button>
+            <button type="button" id="export-btn" class="primary-btn" style="background: #10b981; border-color: #10b981;">Download Report</button>
+        </div>
+    </form>
+</div>
+
+{% if report_data %}
+    {% for data in report_data %}
+    <div class="session-card">
+        <div class="session-header">
+            <div class="session-title">
+                <span>Session #{{ data.session.session_id }}</span>
+                <span>{{ data.session.session_date }}</span>
+            </div>
+            <div class="session-meta">
+                <span><strong>Course:</strong> {{ data.course_name }}</span>
+                <span><strong>Class:</strong> {{ data.class_name }}</span>
+                <span><strong>Time:</strong> {{ data.session.start_time }}</span>
+            </div>
+            <div class="session-stats">
+                <span class="stat-item">Total Enrolled: <strong>{{ data.stats.total }}</strong></span>
+                <span class="stat-item">Present: <strong>{{ data.stats.present }}</strong></span>
+                <span class="stat-item">Absent: <strong>{{ data.stats.absent }}</strong></span>
+                <span class="stat-item">Attendance: <strong>{{ data.stats.pct }}%</strong></span>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table-hover" style="margin: 0; border: none; box-shadow: none;">
+                <thead>
+                    <tr>
+                        <th>Roll No</th>
+                        <th>Student Name</th>
+                        <th>Status</th>
+                        <th>Recorded Time</th>
+                        <th>Confidence</th>
+                        <th>Liveness</th>
+                        <th>Method</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in data.rows %}
+                    <tr>
+                        <td>{{ r.roll_no }}</td>
+                        <td>{{ r.student_name }}</td>
+                        <td><span class="badge-{{ r.status|lower }}">{{ r.status }}</span></td>
+                        <td>{{ r.recorded_time }}</td>
+                        <td>{{ r.confidence }}</td>
+                        <td>{{ r.liveness }}</td>
+                        <td>{{ r.method }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="page-card" style="text-align: center; padding: 40px;">
+        <h3 style="color: #4b5563;">No attendance records found for the selected filters.</h3>
+        <p style="color: #6b7280; margin-top: 8px;">Try adjusting your search criteria or resetting filters.</p>
+    </div>
+{% endif %}
+
+{% endblock %}
+
 {% block scripts %}
 <script>
 document.getElementById('export-btn').onclick = async function() {
     const btn = this;
     if (btn.disabled) return;
     
+    const count = parseInt("{{ summary.records }}");
+    if (count === 0) {
+        showToast("No data available for the selected filters.", "warning");
+        return;
+    }
+    
     const originalText = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '⟳ Generating Excel...';
+    btn.innerHTML = '? Generating Excel...';
     
     try {
-        const response = await fetch('/reports/export');
+        // Carry over the current URL search parameters
+        const queryParams = window.location.search;
+        const response = await fetch('/reports/export' + queryParams);
         
         if (!response.ok) {
             throw new Error('Unable to generate the attendance report. Please try again.');
@@ -36,7 +286,7 @@ document.getElementById('export-btn').onclick = async function() {
         window.URL.revokeObjectURL(url);
         
         showToast("Attendance report downloaded successfully.", "success");
-        btn.innerHTML = '✓ Downloaded';
+        btn.innerHTML = '? Downloaded';
         
         setTimeout(() => {
             btn.innerHTML = originalText;

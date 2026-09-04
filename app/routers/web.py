@@ -411,55 +411,83 @@ def history(
 @router.get("/reports")
 def reports(
     request: Request,
+    from_date: str = None,
+    to_date: str = None,
+    session_id: str = None,
+    course_id: str = None,
+    class_id: str = None,
+    student_id: str = None,
+    status: str = None,
+    recognition_method: str = None,
+    liveness_result: str = None,
     db: Session = Depends(get_db),
 ):
     if not user_required(request):
         return RedirectResponse("/login", 303)
 
-    students = db.scalars(
-        select(Student).where(Student.status == "Active")
-    ).all()
+    from app.services.report import get_filtered_attendance_data
+    from app.models.models import Course, Class, AttendanceSession, Student
+    
+    # We need to pass filter options to the template to populate the dropdowns
+    courses = db.scalars(select(Course).where(Course.active == True)).all()
+    classes = db.scalars(select(Class).where(Class.active == True)).all()
+    sessions = db.scalars(select(AttendanceSession).order_by(AttendanceSession.session_date.desc(), AttendanceSession.session_id.desc())).all()
+    students = db.scalars(select(Student).where(Student.status == "Active").order_by(Student.roll_no)).all()
 
-    rows = []
-
-    for s in students:
-        total = (
-            db.scalar(
-                select(func.count(AttendanceSession.session_id)).where(
-                    AttendanceSession.class_id == s.class_id
-                )
-            )
-            or 0
-        )
-
-        present = (
-            db.scalar(
-                select(func.count(AttendanceRecord.attendance_id)).where(
-                    AttendanceRecord.student_id == s.student_id
-                )
-            )
-            or 0
-        )
-
-        pct = (present / total * 100) if total else 0
-
-        rows.append(
-            {
-                "student": f"{s.first_name} {s.last_name}",
-                "roll_no": s.roll_no,
-                "present": present,
-                "sessions": total,
-                "pct": round(pct, 1),
-            }
-        )
+    report_data = get_filtered_attendance_data(
+        db,
+        from_date=from_date,
+        to_date=to_date,
+        session_id=session_id,
+        course_id=course_id,
+        class_id=class_id,
+        student_id=student_id,
+        status=status,
+        recognition_method=recognition_method,
+        liveness_result=liveness_result
+    )
+    
+    # Calculate summary stats for the UI
+    total_sessions = len(report_data)
+    total_students = sum(d["stats"]["total"] for d in report_data)
+    total_present = sum(d["stats"]["present"] for d in report_data)
+    total_absent = sum(d["stats"]["absent"] for d in report_data)
+    avg_pct = (total_present / total_students * 100) if total_students > 0 else 0
+    total_records = sum(len(d["rows"]) for d in report_data)
+    
+    summary = {
+        "sessions": total_sessions,
+        "students": total_students,
+        "present": total_present,
+        "absent": total_absent,
+        "avg_pct": round(avg_pct, 1),
+        "records": total_records
+    }
+    
+    filters = {
+        "from_date": from_date or "",
+        "to_date": to_date or "",
+        "session_id": session_id or "",
+        "course_id": course_id or "",
+        "class_id": class_id or "",
+        "student_id": student_id or "",
+        "status": status or "All",
+        "recognition_method": recognition_method or "All",
+        "liveness_result": liveness_result or "All"
+    }
 
     return request.app.state.templates.TemplateResponse(
         request=request,
         name="reports/analytics.html",
         context=ctx(
             request,
-            rows=rows,
-            stats=dashboard_stats(db),
+            report_data=report_data,
+            summary=summary,
+            filters=filters,
+            courses=courses,
+            classes=classes,
+            sessions=sessions,
+            students=students
         ),
     )
 
@@ -467,6 +495,15 @@ def reports(
 @router.get("/reports/export")
 def export_report(
     request: Request,
+    from_date: str = None,
+    to_date: str = None,
+    session_id: str = None,
+    course_id: str = None,
+    class_id: str = None,
+    student_id: str = None,
+    status: str = None,
+    recognition_method: str = None,
+    liveness_result: str = None,
     db: Session = Depends(get_db),
 ):
     if not user_required(request):
@@ -475,8 +512,20 @@ def export_report(
     from app.services.report import generate_excel_report
     from fastapi.responses import Response
 
+    filters = {
+        "from_date": from_date,
+        "to_date": to_date,
+        "session_id": session_id,
+        "course_id": course_id,
+        "class_id": class_id,
+        "student_id": student_id,
+        "status": status,
+        "recognition_method": recognition_method,
+        "liveness_result": liveness_result
+    }
+
     try:
-        excel_data = generate_excel_report(db)
+        excel_data = generate_excel_report(db, filters)
         return Response(
             content=excel_data,
             media_type=(
@@ -490,17 +539,12 @@ def export_report(
             },
         )
     except Exception as e:
-        # User requested to handle errors gracefully and notify via toast, but this is a direct GET link.
-        # Actually, if we use a GET link and it fails, the browser just displays the error page.
-        # Wait, the prompt says "If Excel generation fails: Log the technical error... Return user-friendly response... The frontend should display the error using the existing notification/toast system."
-        # This implies the frontend makes a fetch request, OR we redirect with a flash message.
-        # Let's redirect with an error message in session.
         import logging
         logging.error(f"Excel export failed: {e}")
         return request.app.state.templates.TemplateResponse(
             request=request,
-            name="attendance/history.html",
-            context=ctx(request, records=[], q="", error="Unable to generate the attendance report. Please try again."),
+            name="reports/analytics.html",
+            context=ctx(request, report_data=[], summary={}, filters={}, error="Unable to generate the attendance report. Please try again."),
         )
 
 
