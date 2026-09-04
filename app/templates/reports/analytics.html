@@ -105,17 +105,6 @@
                 <input type="date" name="to_date" value="{{ filters.to_date }}">
             </div>
             <div class="filter-group">
-                <label>Session</label>
-                <select name="session_id">
-                    <option value="">All Sessions</option>
-                    {% for s in sessions %}
-                    <option value="{{ s.session_id }}" {% if filters.session_id|string == s.session_id|string %}selected{% endif %}>
-                        #{{ s.session_id }} - {{ s.session_date }} ({{ s.class_.class_name }})
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="filter-group">
                 <label>Course</label>
                 <select name="course_id">
                     <option value="">All Courses</option>
@@ -154,14 +143,6 @@
                     <option value="All" {% if filters.status == 'All' %}selected{% endif %}>All</option>
                     <option value="Present" {% if filters.status == 'Present' %}selected{% endif %}>Present</option>
                     <option value="Absent" {% if filters.status == 'Absent' %}selected{% endif %}>Absent</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Recognition Method</label>
-                <select name="recognition_method">
-                    <option value="All" {% if filters.recognition_method == 'All' %}selected{% endif %}>All</option>
-                    <option value="DeepFace/Facenet" {% if filters.recognition_method == 'DeepFace/Facenet' %}selected{% endif %}>Face Recognition</option>
-                    <option value="Manual" {% if filters.recognition_method == 'Manual' %}selected{% endif %}>Manual</option>
                 </select>
             </div>
             <div class="filter-group">
