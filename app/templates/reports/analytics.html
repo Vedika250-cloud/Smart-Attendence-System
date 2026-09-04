@@ -1,0 +1,53 @@
+{% extends 'base.html' %}{% block heading %}Reports & Analytics{% endblock %}{% block content %}<div class="stats-grid compact">{% for label,value in [('Students',stats.students),('Sessions',stats.sessions),('Attendance',stats.attendance)] %}<div class="stat-card"><div class="stat-value">{{ value }}</div><div class="stat-label">{{ label }}</div></div>{% endfor %}</div><div class="page-card table-card"><div class="card-head"><div><h2>Student attendance summary</h2><p>Calculated from stored sessions and attendance records.</p></div><button id="export-btn" class="primary-btn">Export Excel</button></div><table class="table-hover"><thead><tr><th>Student</th><th>Roll No</th><th>Present</th><th>Sessions</th><th>Attendance %</th></tr></thead><tbody>{% for r in rows %}<tr><td>{{ r.student }}</td><td>{{ r.roll_no }}</td><td>{{ r.present }}</td><td>{{ r.sessions }}</td><td><div class="bar"><span style="width:{{ r.pct }}%"></span></div><strong>{{ r.pct }}%</strong></td></tr>{% else %}<tr><td colspan="5" class="empty"><div style="padding: 20px;"><strong>No data available.</strong><br><small>Register students and run sessions to generate analytics.</small></div></td></tr>{% endfor %}</tbody></table></div>{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('export-btn').onclick = async function() {
+    const btn = this;
+    if (btn.disabled) return;
+    
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⟳ Generating Excel...';
+    
+    try {
+        const response = await fetch('/reports/export');
+        
+        if (!response.ok) {
+            throw new Error('Unable to generate the attendance report. Please try again.');
+        }
+        
+        let filename = 'Attendance_Report.xlsx';
+        const disposition = response.headers.get('Content-Disposition');
+        if (disposition && disposition.indexOf('filename=') !== -1) {
+            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+            if (matches != null && matches[1]) { 
+                filename = matches[1].replace(/['"]/g, '');
+            }
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
+        showToast("Attendance report downloaded successfully.", "success");
+        btn.innerHTML = '✓ Downloaded';
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }, 3000);
+        
+    } catch (e) {
+        showToast(e.message, "error");
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+};
+</script>
+{% endblock %}

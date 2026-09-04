@@ -1,0 +1,15 @@
+{% extends 'base.html' %}{% block heading %}Student Management{% endblock %}{% block content %}<div class="toolbar"><form class="search" method="get"><input name="q" value="{{ q }}" placeholder="Search roll number or name..."><button>Search</button></form><a class="primary-btn" href="/students/register">＋ Add student</a></div><div class="page-card table-card"><table class="table-hover"><thead><tr><th>Roll No</th><th>Student</th><th>Class</th><th>Face Profile</th><th>Status</th><th>Action</th></tr></thead><tbody>{% for s in students %}<tr><td><strong>{{ s.roll_no }}</strong></td><td>{{ s.first_name }} {{ s.last_name }}<small>{{ s.email or 'No email' }}</small></td><td>{{ s.class_.class_name }}</td><td>{% if s.face_data %}<span class="badge-soft success">Registered</span>{% else %}<span class="badge-soft warning">Not registered</span>{% endif %}</td><td>{{ s.status }}</td><td><a class="table-link" href="/students/{{ s.student_id }}/edit">Edit</a> <a class="table-link" href="/students/{{ s.student_id }}/face">Face profile</a>{% if user.role=='admin' %}<form method="post" action="/students/{{ s.student_id }}/delete" class="inline delete-form"><button type="submit" class="danger-link">Delete</button></form>{% endif %}</td></tr>{% else %}<tr><td colspan="6" class="empty"><div style="padding: 20px;"><strong>No students found.</strong><br><small>Click "Add student" to register a new learner.</small></div></td></tr>{% endfor %}</tbody></table></div>{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.delete-form').forEach(form => {
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            showConfirmModal("Delete Student?", "Are you sure you want to permanently delete this student? This action cannot be undone.", "Delete", () => {
+                form.submit();
+            }, 'danger');
+        };
+    });
+});
+</script>
+{% endblock %}

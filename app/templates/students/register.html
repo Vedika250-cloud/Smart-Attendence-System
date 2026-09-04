@@ -1,0 +1,23 @@
+{% extends 'base.html' %}{% block heading %}Student Registration{% endblock %}{% block content %}<div class="page-card"><div class="card-head"><div><h2>Student information</h2><p>Register the learner first, then capture a live facial embedding.</p></div><span class="step-pill">STEP 1 OF 2</span></div><form id="register-form" method="post" class="form-grid" novalidate><div><label>Roll number *</label><input name="roll_no" required></div><div><label>First name *</label><input name="first_name" required></div><div><label>Last name *</label><input name="last_name" required></div><div><label>Email</label><input name="email" type="email"></div><div><label>Phone</label><input name="phone"></div><div><label>Class *</label><select name="class_id" required>{% for c in classes %}<option value="{{ c.class_id }}">{{ c.class_name }} — {{ c.course.course_code }}</option>{% endfor %}</select></div><div class="full"><button id="register-btn" type="submit" class="primary-btn">Save & continue to face registration →</button></div></form></div>{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('register-form').onsubmit = function(e) {
+    let valid = true;
+    const required = this.querySelectorAll('[required]');
+    required.forEach(field => {
+        if (!field.value.trim()) {
+            valid = false;
+            field.style.borderColor = 'var(--red)';
+        } else {
+            field.style.borderColor = '';
+        }
+    });
+    if (!valid) {
+        e.preventDefault();
+        showToast("Please complete all required fields before continuing.", "warning");
+    } else {
+        setButtonLoading(document.getElementById('register-btn'), "Registering...");
+    }
+};
+</script>
+{% endblock %}

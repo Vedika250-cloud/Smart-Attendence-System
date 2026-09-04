@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block heading %}
+Live Attendance
+{% endblock %}
+
+{% block content %}
+
+<div class="live-header">
+    <div>
+        <p class="lead muted">
+            {{ session.class_.class_name }}
+            · Session #{{ session.session_id }}
+            · {{ session.session_date }}
+        </p>
+    </div>
+
+    <span class="status-pill live">
+        ● SESSION ACTIVE
+    </span>
+</div>
+
+
+<div class="live-layout">
+
+    <!-- CAMERA -->
+    <div class="camera-card">
+
+        <div class="camera-top">
+            <span>LIVE CAMERA</span>
+            <span id="camera-state">Camera not started</span>
+        </div>
+
+        <video
+            id="attendance-camera"
+            autoplay
+            playsinline>
+        </video>
+
+        <canvas
+            id="attendance-frame"
+            class="d-none">
+        </canvas>
+
+        <div class="camera-actions">
+            <button
+                id="attendance-start"
+                type="button"
+                class="primary-btn">
+                Enable camera
+            </button>
+        </div>
+
+    </div>
+
+
+    <!-- ATTENDANCE DECISION -->
+    <div class="decision-card">
+
+        <span class="eyebrow">
+            ATTENDANCE DECISION
+        </span>
+
+        <div
+            id="decision-title"
+            class="decision-title">
+            Ready to start
+        </div>
+
+        <div
+            id="decision-message"
+            class="decision-message">
+            Enable the camera. The system will guide you through the attendance verification process.
+        </div>
+
+
+        <!-- LIVENESS GUIDE -->
+        <div
+            id="liveness-guide"
+            class="liveness-guide">
+
+            <div class="liveness-guide-title">
+                LIVENESS INSTRUCTIONS
+            </div>
+
+            <div
+                id="liveness-instruction"
+                class="liveness-instruction">
+                Please follow the prompts above.
+            </div>
+
+        </div>
+
+
+        <!-- PIPELINE STATUS -->
+        <div class="pipeline-status">
+
+            <div id="stage-face">
+                ○ Face detection
+            </div>
+
+            <div id="stage-quality">
+                ○ Face quality
+            </div>
+
+            <div id="stage-live">
+                ○ Liveness
+            </div>
+
+            <div id="stage-recognition">
+                ○ Recognition
+            </div>
+
+            <div id="stage-db">
+                ○ Database record
+            </div>
+
+        </div>
+
+
+        <div
+            id="confidence"
+            class="confidence">
+        </div>
+
+
+        <!-- END SESSION -->
+        <form
+            method="post"
+            action="/attendance/session/{{ session.session_id }}/end">
+
+            <button
+                type="submit"
+                class="danger-btn w-100">
+                End session
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script src="/static/js/camera.js?v={{ version }}"></script>
+
+<script>
+    window.AttendanceCamera.init(
+        Number("{{ session.session_id }}")
+    );
+
+    // End session form
+    const endForm = document.querySelector('form[action*="/end"]');
+    if (endForm) {
+        endForm.onsubmit = (e) => {
+            e.preventDefault();
+            showConfirmModal("End Session?", "Are you sure you want to end this attendance session?", "End Session", () => {
+                const btn = endForm.querySelector('button');
+                setButtonLoading(btn, "Ending...");
+                endForm.submit();
+            }, 'danger');
+        };
+    }
+</script>
+{% endblock %}

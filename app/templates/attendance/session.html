@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+
+{% block heading %}Attendance Session Setup{% endblock %}
+
+{% block content %}
+
+<div class="session-setup">
+
+    {% if active %}
+
+    <!-- ACTIVE SESSION -->
+    <div class="page-card active-session-card">
+
+        <div class="active-session-content">
+
+            <div>
+
+                <span class="eyebrow">ACTIVE SESSION</span>
+
+                <h2>Attendance session is already active</h2>
+
+                <p>
+                    A session is currently running. Continue the session
+                    to record attendance, or end it before starting a new one.
+                </p>
+
+                <div class="active-session-meta">
+
+                    <div>
+                        <span>SESSION ID</span>
+                        <strong>#{{ active.session_id }}</strong>
+                    </div>
+
+                    <div>
+                        <span>CLASS</span>
+                        <strong>
+                            {% if active.class %}
+                                {{ active.class.class_name }}
+                            {% else %}
+                                Class #{{ active.class_id }}
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>STATUS</span>
+                        <strong class="status-active">
+                            ● Active
+                        </strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="active-session-actions">
+
+                <a
+                    href="/attendance/live/{{ active.session_id }}"
+                    class="primary-btn"
+                >
+                    ▶ Continue Session
+                </a>
+
+                <form
+                    method="post"
+                    action="/attendance/session/{{ active.session_id }}/end"
+                    onsubmit="return confirm('Are you sure you want to end this attendance session?');"
+                >
+
+                    <button
+                        type="submit"
+                        class="danger-btn"
+                    >
+                        ■ End Session
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    {% else %}
+
+    <!-- START NEW SESSION -->
+    <div class="page-card session-card">
+
+        <div class="card-head">
+
+            <div>
+
+                <span class="eyebrow">START A SESSION</span>
+
+                <h2>Classroom attendance</h2>
+
+                <p>
+                    Select a class and create a controlled attendance session.
+                </p>
+
+            </div>
+
+            <div class="session-icon">
+                ▶
+            </div>
+
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post">
+
+            <label for="class_id">
+                Class
+            </label>
+
+            <select
+                id="class_id"
+                name="class_id"
+                required
+            >
+
+                {% for c in classes %}
+
+                <option value="{{ c.class_id }}">
+                    {{ c.class_name }} — {{ c.course.course_name }}
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+            <div class="session-meta">
+
+                <div>
+                    <span>DATE</span>
+                    <strong>Today</strong>
+                </div>
+
+                <div>
+                    <span>MODE</span>
+                    <strong>AI + Liveness</strong>
+                </div>
+
+                <div>
+                    <span>DATABASE</span>
+                    <strong>Shared-ready</strong>
+                </div>
+
+            </div>
+
+            <button
+                type="submit"
+                class="primary-btn w-100"
+            >
+                ▶ Start attendance session
+            </button>
+
+        </form>
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- SECURITY INFORMATION -->
+    <div class="info-panel">
+
+        <span class="eyebrow">
+            SECURITY PIPELINE
+        </span>
+
+        <h3>
+            Attendance is not marked immediately.
+        </h3>
+
+        <ol>
+
+            <li>Face detection</li>
+
+            <li>Face quality check</li>
+
+            <li>Liveness verification</li>
+
+            <li>Recognition confidence</li>
+
+            <li>Duplicate check</li>
+
+            <li>Database record</li>
+
+        </ol>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // End session form
+    const endForm = document.querySelector('form[action*="/end"]');
+    if (endForm) {
+        // Remove inline onsubmit
+        endForm.removeAttribute('onsubmit');
+        endForm.onsubmit = (e) => {
+            e.preventDefault();
+            showConfirmModal("End Session?", "Are you sure you want to end this attendance session?", "End Session", () => {
+                const btn = endForm.querySelector('button');
+                setButtonLoading(btn, "Ending...");
+                endForm.submit();
+            }, 'danger');
+        };
+    }
+
+    // Start session form
+    const startForm = document.querySelector('.session-card form');
+    if (startForm) {
+        startForm.onsubmit = (e) => {
+            e.preventDefault();
+            showConfirmModal("Start Attendance Session?", "Attendance will begin for this class.", "Start Session", () => {
+                const btn = startForm.querySelector('button');
+                setButtonLoading(btn, "Starting session...");
+                startForm.submit();
+            }, 'primary');
+        };
+    }
+});
+</script>
+{% endblock %}

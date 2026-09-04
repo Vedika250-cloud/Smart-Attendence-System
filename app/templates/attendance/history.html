@@ -1,0 +1,54 @@
+{% extends 'base.html' %}{% block heading %}Attendance History{% endblock %}{% block content %}<div class="toolbar"><form class="search" method="get"><input name="q" value="{{ q }}" placeholder="Search student..."><button>Search</button></form><button id="export-btn" class="secondary-btn">Export Excel</button></div><div class="page-card table-card"><table class="table-hover"><thead><tr><th>Student</th><th>Session</th><th>Date</th><th>Recorded</th><th>Confidence</th><th>Liveness</th><th>Status</th></tr></thead><tbody>{% for r in records %}<tr><td><strong>{{ r.student.first_name }} {{ r.student.last_name }}</strong><small>{{ r.student.roll_no }}</small></td><td>#{{ r.session_id }} · {{ r.session.class_.class_name }}</td><td>{{ r.session.session_date }}</td><td>{{ r.recorded_time }}</td><td>{{ '%.1f'|format((r.recognition_confidence or 0)*100) }}%</td><td>{{ r.liveness_result or '—' }}</td><td><span class="badge-soft success">{{ r.attendance_status }}</span></td></tr>{% else %}<tr><td colspan="7" class="empty"><div style="padding: 20px;"><strong>No attendance records available.</strong><br><small>Start a new session to record attendance.</small></div></td></tr>{% endfor %}</tbody></table></div>{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('export-btn').onclick = async function() {
+    const btn = this;
+    if (btn.disabled) return;
+    
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⟳ Generating Excel...';
+    
+    try {
+        const response = await fetch('/reports/export');
+        
+        if (!response.ok) {
+            throw new Error('Unable to generate the attendance report. Please try again.');
+        }
+        
+        // Extract filename from Content-Disposition if present
+        let filename = 'Attendance_Report.xlsx';
+        const disposition = response.headers.get('Content-Disposition');
+        if (disposition && disposition.indexOf('filename=') !== -1) {
+            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+            if (matches != null && matches[1]) { 
+                filename = matches[1].replace(/['"]/g, '');
+            }
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
+        showToast("Attendance report downloaded successfully.", "success");
+        btn.innerHTML = '✓ Downloaded';
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }, 3000);
+        
+    } catch (e) {
+        showToast(e.message, "error");
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+};
+</script>
+{% endblock %}

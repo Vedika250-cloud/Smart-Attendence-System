@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
+sqlalchemy
+psycopg[binary]
+openpyxl
+opencv-contrib-python==4.13.0.92
+deepface
+tensorflow
+tf-keras==2.21.0
+mediapipe
+numpy
+pandas
+matplotlib
+Pillow
