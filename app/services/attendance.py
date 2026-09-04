@@ -126,6 +126,17 @@ def close_session(db: Session, session):
 
     db.commit()
 
+    try:
+        from app.routers.api import _unknown_faces_session, _unknown_counter, _registration_mode
+        _unknown_faces_session.pop(session.session_id, None)
+        _unknown_counter.pop(session.session_id, None)
+        # also remove any keys starting with session-{session_id} from _registration_mode
+        keys_to_delete = [k for k in _registration_mode.keys() if k.startswith(f"session-{session.session_id}")]
+        for k in keys_to_delete:
+            _registration_mode.pop(k, None)
+    except ImportError:
+        pass
+
     return absent_count
 
 

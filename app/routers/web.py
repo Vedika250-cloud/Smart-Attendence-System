@@ -341,10 +341,17 @@ def live(
     if request.query_params.get("new") == "1":
         msg = "Attendance session started successfully."
 
+    students = db.scalars(
+        select(Student).where(
+            Student.class_id == s.class_id,
+            Student.status == "Active"
+        ).order_by(Student.roll_no)
+    ).all()
+
     return request.app.state.templates.TemplateResponse(
         request=request,
         name="attendance/live.html",
-        context=ctx(request, session=s, message=msg),
+        context=ctx(request, session=s, message=msg, students=students),
     )
 
 

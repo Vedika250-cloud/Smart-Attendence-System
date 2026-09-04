@@ -636,7 +636,9 @@ window.AttendanceCamera = {
                 timer = null;
             }
         }
-
+        
+        let unknownRegistrationMode = false;
+        let unknownTargetId = null;
 
         /* -------------------------------------------------
            Process one frame
@@ -655,12 +657,14 @@ window.AttendanceCamera = {
 
             try {
                 const imgData = capture(video, canvas);
-                console.log("[3 API REQUEST] Sending frame to /api/attendance/" + sessionId + "/process-frame");
+                
+                let endpointUrl = "/api/attendance/" + sessionId + "/process-frame";
+                if (unknownRegistrationMode && unknownTargetId) {
+                    endpointUrl = "/api/attendance/" + sessionId + "/register-unknown/process-frame?target=" + encodeURIComponent(unknownTargetId);
+                }
                 
                 const response = await fetch(
-                    "/api/attendance/" +
-                    sessionId +
-                    "/process-frame",
+                    endpointUrl,
                     {
                         method: "POST",
                         headers: {
@@ -730,6 +734,119 @@ window.AttendanceCamera = {
                     data.stage,
                     data.decision
                 );
+                
+                /* -------------------------------
+                   Unknown Person
+                   ------------------------------- */
+                   
+                if (data.decision === "unknown") {
+                    stopPolling();
+                    const modal = document.getElementById("unknown-modal");
+                    const list = document.getElementById("unknown-list");
+                    list.innerHTML = "";
+                    
+                    data.unknowns.forEach(uid => {
+                        const btn = document.createElement("button");
+                        btn.className = "primary-btn";
+                        btn.style.width = "100%";
+                        btn.textContent = "Register " + uid;
+                        btn.onclick = () => {
+                            unknownTargetId = uid;
+                            unknownRegistrationMode = true;
+                            modal.classList.add("d-none");
+                            
+                            resetPipeline();
+                            title.textContent = "Registration Mode";
+                            msg.textContent = "Please follow the instructions on screen.";
+                            state.textContent = "Registering " + uid;
+                            
+                            processFrame();
+                            timer = setInterval(processFrame, 250);
+                        };
+                        list.appendChild(btn);
+                    });
+                    
+                    modal.classList.remove("d-none");
+                    
+                    document.getElementById("unknown-cancel-btn").onclick = () => {
+                        modal.classList.add("d-none");
+                        resetPipeline();
+                        title.textContent = "Ready for next student";
+                        msg.textContent = "Next student, please look at the camera.";
+                        conf.textContent = "";
+                        state.textContent = "Camera active";
+                        processFrame();
+                        timer = setInterval(processFrame, 250);
+                    };
+                    return;
+                }
+                
+                if (data.decision === "unknown_ready") {
+                    stopPolling();
+                    const modal = document.getElementById("student-details-modal");
+                    modal.classList.remove("d-none");
+                    
+                    document.getElementById("student-cancel-btn").onclick = () => {
+                        modal.classList.add("d-none");
+                        unknownRegistrationMode = false;
+                        unknownTargetId = null;
+                        
+                        resetPipeline();
+                        title.textContent = "Ready for next student";
+                        msg.textContent = "Next student, please look at the camera.";
+                        conf.textContent = "";
+                        state.textContent = "Camera active";
+                        processFrame();
+                        timer = setInterval(processFrame, 250);
+                    };
+                    
+                    document.getElementById("student-save-btn").onclick = async () => {
+                        const studentId = document.getElementById("student-select").value;
+                        if (!studentId) {
+                            showToast("Please select a student.", "warning");
+                            return;
+                        }
+                        
+                        const btn = document.getElementById("student-save-btn");
+                        btn.disabled = true;
+                        btn.textContent = "Saving...";
+                        
+                        try {
+                            const res = await fetch("/api/attendance/" + sessionId + "/finalize-unknown", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ target: unknownTargetId, student_id: studentId })
+                            });
+                            const fData = await res.json();
+                            if (!fData.ok) {
+                                throw new Error(fData.message || "Failed to finalize registration.");
+                            }
+                            
+                            modal.classList.add("d-none");
+                            showToast(fData.message, "success", "Success");
+                            
+                            unknownRegistrationMode = false;
+                            unknownTargetId = null;
+                            
+                            setTimeout(() => {
+                                resetPipeline();
+                                title.textContent = "Ready for next student";
+                                msg.textContent = "Next student, please look at the camera.";
+                                conf.textContent = "";
+                                state.textContent = "Camera active";
+                                processFrame();
+                                timer = setInterval(processFrame, 250);
+                            }, 2000);
+                            
+                        } catch (err) {
+                            showToast(err.message, "error");
+                        } finally {
+                            btn.disabled = false;
+                            btn.textContent = "Save & Mark Present";
+                        }
+                    };
+                    return;
+                }
 
 
                 /* -------------------------------

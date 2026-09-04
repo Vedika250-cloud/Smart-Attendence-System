@@ -1,0 +1,33 @@
+
+<!-- UNKNOWN PERSON MODAL -->
+<div id="unknown-modal" class="modal-overlay d-none" style="z-index: 9999;">
+    <div class="modal-card">
+        <h3 class="modal-title">Unregistered Person Detected</h3>
+        <p class="modal-text">We found one or more faces that are not registered. Are you one of these people?</p>
+        <div id="unknown-list" style="margin: 20px 0; display: flex; flex-direction: column; gap: 10px;">
+        </div>
+        <div class="modal-actions">
+            <button id="unknown-cancel-btn" type="button" class="secondary-btn">Not Me</button>
+        </div>
+    </div>
+</div>
+
+<!-- STUDENT DETAILS MODAL -->
+<div id="student-details-modal" class="modal-overlay d-none" style="z-index: 9999;">
+    <div class="modal-card">
+        <h3 class="modal-title">Select Student to Register</h3>
+        <p class="modal-text">Please select the student profile for this facial data.</p>
+        <div style="margin: 20px 0;">
+            <select id="student-select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <option value="">-- Select Student --</option>
+                {% for s in students %}
+                    <option value="{{ s.student_id }}">{{ s.roll_no }} - {{ s.first_name }} {{ s.last_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button id="student-cancel-btn" type="button" class="secondary-btn">Cancel</button>
+            <button id="student-save-btn" type="button" class="primary-btn">Save & Mark Present</button>
+        </div>
+    </div>
+</div>
