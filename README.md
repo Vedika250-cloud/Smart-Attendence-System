@@ -1,18 +1,18 @@
-# 🎓 AI-Based Smart Attendance System
+#  AI-Based Smart Attendance System
 
 An AI-powered Smart Attendance System that automates classroom attendance using **Face Recognition**, **Liveness Detection**, and **Real-Time Camera Verification**. The system eliminates manual attendance, prevents proxy attendance, detects spoofing attempts, and allows administrators to register previously unknown students during an active attendance session.
 
 ---
 
-# ✨ Features
+#  Features
 
-## 👤 Student Management
+##  Student Management
 - Add and manage student records
 - Register students with facial data
 - Store secure face embeddings
 - Update student information
 
-## 🎥 Smart Attendance
+##  Smart Attendance
 - Real-time webcam attendance
 - Automatic face detection
 - Face quality verification
@@ -21,14 +21,14 @@ An AI-powered Smart Attendance System that automates classroom attendance using 
 - Automatic attendance marking
 - Duplicate attendance prevention
 
-## 🔒 Security Features
+##  Security Features
 - Liveness Detection (Anti-Spoofing)
 - Rejects photo/video attacks
 - Unknown face detection
 - Secure facial embedding storage
 - Session-based attendance
 
-## 👥 Unknown Student Registration
+##  Unknown Student Registration
 When an unknown person is detected:
 
 - Detects unregistered faces
@@ -37,7 +37,7 @@ When an unknown person is detected:
 - Stores facial embeddings
 - Automatically marks attendance after successful registration
 
-## 📊 Attendance Reports
+##  Attendance Reports
 - Session-wise attendance
 - Student attendance history
 - Attendance statistics
@@ -45,7 +45,7 @@ When an unknown person is detected:
 
 ---
 
-# 🚀 System Workflow
+#  System Workflow
 
 ```
 Camera
@@ -73,7 +73,7 @@ Marked                  Save Face Data
 
 ---
 
-# 🧠 AI Pipeline
+#  AI Pipeline
 
 1. Capture live camera frame
 2. Detect face using OpenCV
@@ -87,7 +87,7 @@ Marked                  Save Face Data
 
 ---
 
-# 🛠 Technology Stack
+#  Technology Stack
 
 ## Backend
 - Python
@@ -115,7 +115,7 @@ Marked                  Save Face Data
 
 ---
 
-# 📁 Project Structure
+#  Project Structure
 
 ```
 AI-Smart-Attendance-System/
@@ -145,7 +145,7 @@ AI-Smart-Attendance-System/
 
 ---
 
-# ⚙ Installation
+#  Installation
 
 ## Clone the Repository
 
@@ -185,7 +185,7 @@ uvicorn main:app --reload
 
 ---
 
-# 🌐 Open in Browser
+#  Open in Browser
 
 ```
 http://127.0.0.1:8000
@@ -193,7 +193,7 @@ http://127.0.0.1:8000
 
 ---
 
-# 👨‍💻 User Workflow
+#  User Workflow
 
 ## Administrator
 
@@ -245,7 +245,7 @@ Attendance Marked
 
 ---
 
-# 📸 Screenshots
+#  Screenshots
 
 ### Login Page
 
@@ -288,7 +288,7 @@ Attendance Marked
 
 ---
 
-# 📊 Key Features
+#  Key Features
 
 - ✅ AI-Based Face Recognition
 - ✅ DeepFace FaceNet Embeddings
@@ -302,7 +302,7 @@ Attendance Marked
 
 ---
 
-# 🔐 Security
+#  Security
 
 - Admin Authentication
 - Liveness Detection
@@ -313,7 +313,7 @@ Attendance Marked
 
 ---
 
-# 📈 Future Scope
+#  Future Scope
 
 - Mobile Application
 - Cloud Database Integration
@@ -326,7 +326,7 @@ Attendance Marked
 
 ---
 
-# 👥 Contributors
+#  Contributors
 
 - Aashmita Tiwari
 - Mahek Yadav
@@ -336,7 +336,7 @@ Attendance Marked
 
 ---
 
-# 🙏 Acknowledgements
+# Acknowledgements
 
 This project was developed as part of an academic AI & Statistics project.
 
@@ -352,6 +352,6 @@ Special thanks to the open-source communities behind:
 
 ---
 
-# 📄 License
+#  License
 
 This project is intended for **educational and academic purposes**.
