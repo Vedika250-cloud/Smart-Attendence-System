@@ -438,7 +438,7 @@ def process_frame(
             "ok": False,
             "stage": "Recognition",
             "message": "Student not recognized.",
-            "decision": "unknown",
+            "decision": "rejected",
             "unknowns": list(session_unknowns.keys()),
             "confidence": round((best["result"]["confidence"] if best else 0) * 100, 1)
         }
@@ -497,19 +497,24 @@ def process_frame(
     )
 
     return {
-        "ok": True,
-        "stage": "Attendance Accepted",
-        "message": (
-            f"Attendance marked for "
-            f"{student.first_name} "
-            f"{student.last_name}."
-        ),
-        "confidence": round(
-            best["result"]["confidence"] * 100,
-            1
-        ),
-        "decision": "accepted",
-    }
+    "ok": True,
+    "stage": "Attendance Accepted",
+    "message": (
+        f"Attendance marked for "
+        f"{student.first_name} "
+        f"{student.last_name}."
+    ),
+    "student_name": (
+        f"{student.first_name} "
+        f"{student.last_name}"
+    ),
+    "student_roll": student.roll_no,
+    "confidence": round(
+        best["result"]["confidence"] * 100,
+        1
+    ),
+    "decision": "accepted",
+}
 
 # =========================================================
 # UNKNOWN PERSON REGISTRATION

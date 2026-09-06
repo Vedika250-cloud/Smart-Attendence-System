@@ -192,820 +192,306 @@ window.FaceCapture = {
    ========================================================= */
 
 window.AttendanceCamera = {
-
     init(sessionId) {
+        const video = document.getElementById('attendance-camera');
+        const canvas = document.getElementById('attendance-frame');
+        const start = document.getElementById('attendance-start');
+        const successPopup =
+        document.getElementById('attendance-success-popup');
 
-        const video =
-            document.getElementById("attendance-camera");
+        const popupStudentName =
+        document.getElementById('popup-student-name');
 
-        const canvas =
-            document.getElementById("attendance-frame");
+        const popupStudentRoll =
+        document.getElementById('popup-student-roll');
 
-        const start =
-            document.getElementById("attendance-start");
+        const state = document.getElementById('camera-state');
+        const title = document.getElementById('decision-title');
+        const msg = document.getElementById('decision-message');
+        const conf = document.getElementById('confidence');
 
-        const state =
-            document.getElementById("camera-state");
-
-        const title =
-            document.getElementById("decision-title");
-
-        const msg =
-            document.getElementById("decision-message");
-
-        const conf =
-            document.getElementById("confidence");
-
-        const stageFace =
-            document.getElementById("stage-face");
-
-        const stageQuality =
-            document.getElementById("stage-quality");
-
-        const stageLive =
-            document.getElementById("stage-live");
-
-        const stageRecognition =
-            document.getElementById("stage-recognition");
-
-        const stageDb =
-            document.getElementById("stage-db");
-
+        const stages = {
+            face: document.getElementById('stage-face'),
+            quality: document.getElementById('stage-quality'),
+            live: document.getElementById('stage-live'),
+            recognition: document.getElementById('stage-recognition'),
+            db: document.getElementById('stage-db')
+        };
 
         let timer = null;
         let busy = false;
 
-
-        /* -------------------------------------------------
-           Stage helper
-           ------------------------------------------------- */
-
-        function setStage(element, status, label) {
-
-            if (!element) return;
-
-            element.className = "";
-
-            if (status === "done") {
-
-                element.textContent = "✓ " + label;
-                element.classList.add("stage-done");
-
-            } else if (status === "active") {
-
-                element.textContent = "◉ " + label;
-                element.classList.add("stage-active");
-
-            } else if (status === "failed") {
-
-                element.textContent = "✗ " + label;
-                element.classList.add("stage-failed");
-
-            } else {
-
-                element.textContent = "○ " + label;
-            }
+        function resetStages() {
+            stages.face.textContent = '○ Face detection';
+            stages.quality.textContent = '○ Face quality';
+            stages.live.textContent = '○ Liveness';
+            stages.recognition.textContent = '○ Recognition';
+            stages.db.textContent = '○ Database record';
         }
 
+        function updateStages(stage, decision) {
+            resetStages();
 
-        /* -------------------------------------------------
-           Reset pipeline
-           ------------------------------------------------- */
-
-        function resetPipeline() {
-
-            setStage(
-                stageFace,
-                "idle",
-                "Face detection"
-            );
-
-            setStage(
-                stageQuality,
-                "idle",
-                "Face quality"
-            );
-
-            setStage(
-                stageLive,
-                "idle",
-                "Liveness"
-            );
-
-            setStage(
-                stageRecognition,
-                "idle",
-                "Recognition"
-            );
-
-            setStage(
-                stageDb,
-                "idle",
-                "Database record"
-            );
-        }
-
-
-        /* -------------------------------------------------
-           Update pipeline
-           ------------------------------------------------- */
-
-        function renderPipeline(currentStage, decision) {
-
-            const stage =
-                String(currentStage || "")
-                    .trim()
-                    .toLowerCase();
-
-
-            /*
-             * No face
-             */
-
-            if (
-                stage.includes("face detection") &&
-                decision === "waiting"
-            ) {
-
-                setStage(
-                    stageFace,
-                    "active",
-                    "Face detection"
-                );
-
-                setStage(
-                    stageQuality,
-                    "idle",
-                    "Face quality"
-                );
-
-                setStage(
-                    stageLive,
-                    "idle",
-                    "Liveness"
-                );
-
-                setStage(
-                    stageRecognition,
-                    "idle",
-                    "Recognition"
-                );
-
-                setStage(
-                    stageDb,
-                    "idle",
-                    "Database record"
-                );
-
-                return;
+            if (stage === 'Face Detection') {
+                stages.face.textContent = '✓ Face detection';
             }
 
-
-            /*
-             * Face detection rejected
-             */
-
-            if (
-                stage.includes("face detection") &&
-                decision === "rejected"
-            ) {
-
-                setStage(
-                    stageFace,
-                    "failed",
-                    "Face detection"
-                );
-
-                setStage(
-                    stageQuality,
-                    "idle",
-                    "Face quality"
-                );
-
-                setStage(
-                    stageLive,
-                    "idle",
-                    "Liveness"
-                );
-
-                setStage(
-                    stageRecognition,
-                    "idle",
-                    "Recognition"
-                );
-
-                setStage(
-                    stageDb,
-                    "idle",
-                    "Database record"
-                );
-
-                return;
+            if (stage === 'Face Quality') {
+                stages.face.textContent = '✓ Face detection';
+                stages.quality.textContent = '✓ Face quality';
             }
 
-
-            /*
-             * Face quality
-             */
-
-            if (stage.includes("face quality")) {
-
-                setStage(
-                    stageFace,
-                    "done",
-                    "Face detection"
-                );
-
-                if (decision === "rejected") {
-
-                    setStage(
-                        stageQuality,
-                        "failed",
-                        "Face quality"
-                    );
-
-                } else {
-
-                    setStage(
-                        stageQuality,
-                        "active",
-                        "Face quality"
-                    );
-                }
-
-                return;
+            if (stage === 'Liveness') {
+                stages.face.textContent = '✓ Face detection';
+                stages.quality.textContent = '✓ Face quality';
+                stages.live.textContent = '✓ Liveness';
             }
 
-
-            /*
-             * Liveness
-             *
-             * IMPORTANT:
-             * "rejected" here does NOT stop the camera.
-             * The liveness detector needs more frames.
-             */
-
-            if (stage.includes("liveness")) {
-
-                setStage(
-                    stageFace,
-                    "done",
-                    "Face detection"
-                );
-
-                setStage(
-                    stageQuality,
-                    "done",
-                    "Face quality"
-                );
-
-                if (decision === "rejected") {
-
-                    setStage(
-                        stageLive,
-                        "failed",
-                        "Liveness"
-                    );
-
-                } else {
-
-                    setStage(
-                        stageLive,
-                        "active",
-                        "Liveness"
-                    );
-                }
-
-                setStage(
-                    stageRecognition,
-                    "idle",
-                    "Recognition"
-                );
-
-                setStage(
-                    stageDb,
-                    "idle",
-                    "Database record"
-                );
-
-                return;
+            if (stage === 'Recognition') {
+                stages.face.textContent = '✓ Face detection';
+                stages.quality.textContent = '✓ Face quality';
+                stages.live.textContent = '✓ Liveness';
+                stages.recognition.textContent = '✓ Recognition';
             }
 
-
-            /*
-             * Recognition
-             */
-
-            if (stage.includes("recognition")) {
-
-                setStage(
-                    stageFace,
-                    "done",
-                    "Face detection"
-                );
-
-                setStage(
-                    stageQuality,
-                    "done",
-                    "Face quality"
-                );
-
-                setStage(
-                    stageLive,
-                    "done",
-                    "Liveness"
-                );
-
-                if (decision === "rejected") {
-
-                    setStage(
-                        stageRecognition,
-                        "failed",
-                        "Recognition"
-                    );
-
-                } else {
-
-                    setStage(
-                        stageRecognition,
-                        "active",
-                        "Recognition"
-                    );
-                }
-
-                setStage(
-                    stageDb,
-                    "idle",
-                    "Database record"
-                );
-
-                return;
+            if (decision === 'accepted') {
+                stages.face.textContent = '✓ Face detection';
+                stages.quality.textContent = '✓ Face quality';
+                stages.live.textContent = '✓ Liveness';
+                stages.recognition.textContent = '✓ Recognition';
+                stages.db.textContent = '✓ Database record';
             }
 
-
-            /*
-             * Successful attendance
-             */
-
-            if (decision === "accepted") {
-
-                setStage(
-                    stageFace,
-                    "done",
-                    "Face detection"
-                );
-
-                setStage(
-                    stageQuality,
-                    "done",
-                    "Face quality"
-                );
-
-                setStage(
-                    stageLive,
-                    "done",
-                    "Liveness"
-                );
-
-                setStage(
-                    stageRecognition,
-                    "done",
-                    "Recognition"
-                );
-
-                setStage(
-                    stageDb,
-                    "done",
-                    "Database record"
-                );
-
-                return;
-            }
-
-
-            /*
-             * Duplicate attendance
-             */
-
-            if (decision === "duplicate") {
-
-                setStage(
-                    stageFace,
-                    "done",
-                    "Face detection"
-                );
-
-                setStage(
-                    stageQuality,
-                    "done",
-                    "Face quality"
-                );
-
-                setStage(
-                    stageLive,
-                    "done",
-                    "Liveness"
-                );
-
-                setStage(
-                    stageRecognition,
-                    "done",
-                    "Recognition"
-                );
-
-                setStage(
-                    stageDb,
-                    "done",
-                    "Database record"
-                );
-
-                return;
+            if (decision === 'duplicate') {
+                stages.face.textContent = '✓ Face detection';
+                stages.quality.textContent = '✓ Face quality';
+                stages.live.textContent = '✓ Liveness';
+                stages.recognition.textContent = '✓ Recognition';
+                stages.db.textContent = '✓ Already recorded';
             }
         }
-
-
-        /* -------------------------------------------------
-           Stop polling
-           ------------------------------------------------- */
-
-        function stopPolling() {
-
-            if (timer) {
-
-                clearInterval(timer);
-                timer = null;
-            }
-        }
-        
-        let unknownRegistrationMode = false;
-        let unknownTargetId = null;
-
-        /* -------------------------------------------------
-           Process one frame
-           ------------------------------------------------- */
-
-        async function processFrame() {
-
-            if (
-                busy ||
-                video.readyState < 2
-            ) {
-                return;
-            }
-
-            busy = true;
-
-            try {
-                const imgData = capture(video, canvas);
-                
-                let endpointUrl = "/api/attendance/" + sessionId + "/process-frame";
-                if (unknownRegistrationMode && unknownTargetId) {
-                    endpointUrl = "/api/attendance/" + sessionId + "/register-unknown/process-frame?target=" + encodeURIComponent(unknownTargetId);
-                }
-                
-                const response = await fetch(
-                    endpointUrl,
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-                        body: JSON.stringify({ image: imgData })
-                    }
-                );
-
-
-                let data;
-
-                try {
-
-                    data = await response.json();
-
-                } catch {
-
-                    throw new Error(
-                        "Invalid response from server."
-                    );
-                }
-
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        data.message ||
-                        "Server error while processing attendance."
-                    );
-                }
-
-
-                /* -------------------------------
-                   Decision information
-                   ------------------------------- */
-
-                title.textContent =
-                    data.stage || "Processing";
-
-                msg.textContent =
-                    data.message || "";
-
-
-                if (
-                    data.confidence !== undefined &&
-                    data.confidence !== null
-                ) {
-
-                    conf.textContent =
-                        "Recognition confidence: " +
-                        data.confidence +
-                        "%";
-
-                } else {
-
-                    conf.textContent = "";
-                }
-
-
-                /* -------------------------------
-                   Pipeline
-                   ------------------------------- */
-
-                renderPipeline(
-                    data.stage,
-                    data.decision
-                );
-                
-                /* -------------------------------
-                   Unknown Person
-                   ------------------------------- */
-                   
-                if (data.decision === "unknown") {
-                    stopPolling();
-                    const modal = document.getElementById("unknown-modal");
-                    const list = document.getElementById("unknown-list");
-                    list.innerHTML = "";
-                    
-                    data.unknowns.forEach(uid => {
-                        const btn = document.createElement("button");
-                        btn.className = "primary-btn";
-                        btn.style.width = "100%";
-                        btn.textContent = "Register " + uid;
-                        btn.onclick = () => {
-                            unknownTargetId = uid;
-                            unknownRegistrationMode = true;
-                            modal.classList.add("d-none");
-                            
-                            resetPipeline();
-                            title.textContent = "Registration Mode";
-                            msg.textContent = "Please follow the instructions on screen.";
-                            state.textContent = "Registering " + uid;
-                            
-                            processFrame();
-                            timer = setInterval(processFrame, 250);
-                        };
-                        list.appendChild(btn);
-                    });
-                    
-                    modal.classList.remove("d-none");
-                    
-                    document.getElementById("unknown-cancel-btn").onclick = () => {
-                        modal.classList.add("d-none");
-                        resetPipeline();
-                        title.textContent = "Ready for next student";
-                        msg.textContent = "Next student, please look at the camera.";
-                        conf.textContent = "";
-                        state.textContent = "Camera active";
-                        processFrame();
-                        timer = setInterval(processFrame, 250);
-                    };
-                    return;
-                }
-                
-                if (data.decision === "unknown_ready") {
-                    stopPolling();
-                    const modal = document.getElementById("student-details-modal");
-                    modal.classList.remove("d-none");
-                    
-                    document.getElementById("student-cancel-btn").onclick = () => {
-                        modal.classList.add("d-none");
-                        unknownRegistrationMode = false;
-                        unknownTargetId = null;
-                        
-                        resetPipeline();
-                        title.textContent = "Ready for next student";
-                        msg.textContent = "Next student, please look at the camera.";
-                        conf.textContent = "";
-                        state.textContent = "Camera active";
-                        processFrame();
-                        timer = setInterval(processFrame, 250);
-                    };
-                    
-                    document.getElementById("student-save-btn").onclick = async () => {
-                        const studentId = document.getElementById("student-select").value;
-                        if (!studentId) {
-                            showToast("Please select a student.", "warning");
-                            return;
-                        }
-                        
-                        const btn = document.getElementById("student-save-btn");
-                        btn.disabled = true;
-                        btn.textContent = "Saving...";
-                        
-                        try {
-                            const res = await fetch("/api/attendance/" + sessionId + "/finalize-unknown", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ target: unknownTargetId, student_id: studentId })
-                            });
-                            const fData = await res.json();
-                            if (!fData.ok) {
-                                throw new Error(fData.message || "Failed to finalize registration.");
-                            }
-                            
-                            modal.classList.add("d-none");
-                            showToast(fData.message, "success", "Success");
-                            
-                            unknownRegistrationMode = false;
-                            unknownTargetId = null;
-                            
-                            setTimeout(() => {
-                                resetPipeline();
-                                title.textContent = "Ready for next student";
-                                msg.textContent = "Next student, please look at the camera.";
-                                conf.textContent = "";
-                                state.textContent = "Camera active";
-                                processFrame();
-                                timer = setInterval(processFrame, 250);
-                            }, 2000);
-                            
-                        } catch (err) {
-                            showToast(err.message, "error");
-                        } finally {
-                            btn.disabled = false;
-                            btn.textContent = "Save & Mark Present";
-                        }
-                    };
-                    return;
-                }
-
-
-                /* -------------------------------
-                   Accepted
-                   ------------------------------- */
-
-                if (data.decision === "accepted") {
-                    title.textContent = "Attendance Accepted";
-                    msg.textContent = data.message || "Attendance recorded successfully.";
-                    state.textContent = "Preparing for next student...";
-                    
-                    let toastTitle = data.message || "Attendance marked";
-                    let toastMsg = "";
-                    if (data.confidence) {
-                        toastMsg = `Recognition confidence: ${data.confidence}%<br>Liveness: Passed`;
-                    }
-                    showToast(toastMsg, "success", toastTitle);
-
-                    stopPolling();
-
-                    setTimeout(() => {
-                        resetPipeline();
-                        title.textContent = "Ready for next student";
-                        msg.textContent = "Next student, please look at the camera.";
-                        conf.textContent = "";
-                        state.textContent = "Camera active";
-                        processFrame();
-                        timer = setInterval(processFrame, 250);
-                    }, 2500);
-
-                } else if (data.decision === "duplicate") {
-                    title.textContent = "Already Marked";
-                    msg.textContent = data.message || "This student has already been marked. Next student, please.";
-                    state.textContent = "Preparing for next student...";
-                    
-                    showToast(msg.textContent, "warning", title.textContent);
-
-                    stopPolling();
-
-    setTimeout(() => {
-
-        resetPipeline();
-
-        title.textContent =
-            "Ready for next student";
-
-        msg.textContent =
-            "Next student, please look at the camera.";
-
-        conf.textContent = "";
-
-        state.textContent =
-            "Camera active";
-
-        processFrame();
-        timer = setInterval(
-            processFrame,
-            250
-        );
-
-    }, 2500);
-}
-
-
-                /*
-                 * IMPORTANT:
-                 *
-                 * waiting / rejected responses
-                 * do NOT stop polling.
-                 *
-                 * The system must keep receiving frames
-                 * so the student can retry and the liveness
-                 * detector can obtain consecutive frames.
-                 */
-
-            } catch (e) {
-
-                title.textContent =
-                    "Processing error";
-
-                msg.textContent =
-                    e.message ||
-                    "Unable to process the camera frame.";
-
-            } finally {
-
-                busy = false;
-            }
-        }
-
-
-        /* -------------------------------------------------
-           Start camera
-           ------------------------------------------------- */
 
         start.onclick = async () => {
-
             try {
-
-                start.disabled = true;
-
-                state.textContent =
-                    "Starting camera...";
-
-                title.textContent =
-                    "Preparing camera";
-
-                msg.textContent =
-                    "Please look directly at the camera.";
-
-                resetPipeline();
-
-
                 await startVideo(video);
 
+                state.textContent = 'Camera active';
+                start.textContent = 'Camera enabled';
 
-                state.textContent =
-                    "Camera active";
+                title.textContent = 'Ready';
+                msg.textContent = 'Looking for a student...';
+                conf.textContent = '';
 
-                start.textContent =
-                    "Camera enabled";
+                if (timer) {
+                    clearInterval(timer);
+                }
 
+                timer = setInterval(async () => {
 
-                /*
-                 * Small delay before first frame.
-                 * This allows the webcam to initialise.
-                 */
+                    if (busy || video.readyState < 2) {
+                        return;
+                    }
 
-                await new Promise(resolve => {
-                    setTimeout(resolve, 500);
-                });
+                    busy = true;
 
+                    try {
+                        const image = capture(video, canvas);
 
-                /*
-                 * Start immediately,
-                 * then continue every 250ms.
-                 */
+                        const res = await fetch(
+                            '/api/attendance/' +
+                            sessionId +
+                            '/process-frame',
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    image: image
+                                })
+                            }
+                        );
 
-                await processFrame();
+                        if (!res.ok) {
+                            throw new Error(
+                                'Server returned HTTP ' + res.status
+                            );
+                        }
 
-                timer = setInterval(
-                    processFrame,
-                    250
-                );
+                        const d = await res.json();
 
+                        if (d.decision === 'rejected' || d.decision === 'unknown') {
+
+                          title.textContent = 'Student not recognized';
+
+                          msg.textContent =
+                          'No registered student matched. Please look at the camera and try again.';
+
+                          if (d.confidence !== undefined &&
+                           d.confidence !== null) {
+
+                           conf.textContent =
+                            'Recognition confidence: ' +
+                            d.confidence + '%';
+
+                         } else {
+                           conf.textContent = '';
+                        }
+
+                        setTimeout(() => {
+
+                          if (!busy) {
+
+                            title.textContent = 'Ready';
+
+                            msg.textContent =
+                              'Looking for a student...';
+
+                            resetStages();
+
+                            conf.textContent = '';
+                          }
+
+                        }, 1500);
+                    }
+
+                        updateStages(
+                            d.stage,
+                            d.decision
+                        );
+
+                        title.textContent =
+                            d.stage || 'Processing';
+
+                        msg.textContent =
+                            d.message || '';
+
+                        if (d.confidence !== undefined &&
+                            d.confidence !== null) {
+
+                            conf.textContent =
+                                'Recognition confidence: ' +
+                                d.confidence + '%';
+
+                        } else {
+                            conf.textContent = '';
+                        }
+
+                        /*
+                         * IMPORTANT:
+                         * A rejected recognition must NOT stop
+                         * the attendance loop.
+                         */
+
+                        if (d.decision === 'rejected') {
+
+                            title.textContent =
+                                'Student not recognized';
+
+                            msg.textContent =
+                                'No registered student matched. ' +
+                                'Please look at the camera and try again.';
+
+                            conf.textContent =
+                                d.confidence !== undefined
+                                    ? 'Recognition confidence: ' +
+                                      d.confidence + '%'
+                                    : '';
+
+                            // Allow the next camera frame to be checked.
+                            setTimeout(() => {
+                                if (!busy) {
+                                    title.textContent = 'Ready';
+                                    msg.textContent =
+                                        'Looking for a student...';
+                                    resetStages();
+                                    conf.textContent = '';
+                                }
+                            }, 1500);
+                        }
+
+                        if (d.decision === 'accepted') {
+
+                            title.textContent = 'Attendance marked';
+
+                            msg.textContent =
+                                d.message || 'Attendance recorded successfully.';
+
+                            // Get student information returned by backend
+                            let studentName = 'Student';
+                            let studentRoll = '-';
+
+                            if (d.student_name) {
+                                studentName = d.student_name;
+                            }
+
+                            if (d.student_roll) {
+                                studentRoll = d.student_roll;
+                            }
+
+                            popupStudentName.textContent = studentName;
+                            popupStudentRoll.textContent =
+                                'Roll No: ' + studentRoll;
+
+                            // Show large success popup
+                            successPopup.classList.add('show');
+
+                            // Keep popup visible for 6 seconds
+                            setTimeout(() => {
+
+                                successPopup.classList.remove('show');
+
+                                title.textContent = 'Ready';
+
+                                msg.textContent =
+                                    'Looking for a student...';
+
+                                resetStages();
+
+                                conf.textContent = '';
+
+                            }, 6000);
+                        }
+
+                        if (d.decision === 'duplicate') {
+
+                            title.textContent =
+                                'Already marked';
+
+                            msg.textContent =
+                                d.message ||
+                                'Attendance has already been recorded for this session.';
+                        }
+
+                    } catch (e) {
+
+                        console.error(e);
+
+                        title.textContent =
+                            'Processing error';
+
+                        msg.textContent =
+                            'Unable to process this frame. Retrying...';
+
+                    } finally {
+
+                        busy = false;
+                    }
+
+                }, 900);
 
             } catch (e) {
 
-                start.disabled = false;
+                console.error(e);
 
                 state.textContent =
-                    "Camera unavailable";
+                    'Camera unavailable';
 
                 title.textContent =
-                    "Camera unavailable";
+                    'Camera unavailable';
 
                 msg.textContent =
-                    e.message ||
-                    "Please check camera permissions.";
+                    e.message;
             }
         };
     }

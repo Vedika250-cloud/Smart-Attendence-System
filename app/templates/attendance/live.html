@@ -5,6 +5,32 @@ Live Attendance
 {% endblock %}
 
 {% block content %}
+<!-- Attendance Success Popup -->
+<div id="attendance-success-popup" class="attendance-popup-overlay">
+    <div class="attendance-popup">
+        <div class="attendance-success-icon">✓</div>
+
+        <div class="attendance-popup-label">
+            ATTENDANCE MARKED
+        </div>
+
+        <h2 id="popup-student-name">
+            Student Name
+        </h2>
+
+        <p id="popup-student-roll">
+            Roll No: -
+        </p>
+
+        <div class="attendance-popup-message">
+            Attendance has been successfully recorded.
+        </div>
+
+        <div class="attendance-popup-timer">
+            Returning to camera verification...
+        </div>
+    </div>
+</div>
 
 <div class="live-header">
     <div>
